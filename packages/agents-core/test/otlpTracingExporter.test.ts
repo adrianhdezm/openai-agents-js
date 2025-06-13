@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { OTLPTracingExporter } from '../src/otlpTracingExporter';
-import { createCustomSpan } from '@openai/agents-core';
+import { createCustomSpan } from '../src/tracing/createSpans';
 
 describe('OTLPTracingExporter', () => {
   const fakeSpan = createCustomSpan({
@@ -71,8 +71,8 @@ describe('OTLPTracingExporter', () => {
     const setTraceProcessors = vi.fn();
     const BatchTraceProcessor = vi.fn().mockImplementation((exp) => ({ exp }));
     vi.resetModules();
-    vi.doMock('@openai/agents-core', async () => {
-      const actual = await vi.importActual<any>('@openai/agents-core');
+    vi.doMock('../src/tracing', async () => {
+      const actual = await vi.importActual<any>('../src/tracing');
       return { ...actual, BatchTraceProcessor, setTraceProcessors };
     });
     const mod = await import('../src/otlpTracingExporter');

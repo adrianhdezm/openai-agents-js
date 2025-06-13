@@ -110,6 +110,11 @@ export {
 } from './tool';
 export * from './tracing';
 export { getGlobalTraceProvider, TraceProvider } from './tracing/provider';
+export {
+  OTLPTracingExporter,
+  OTLPTracingExporterOptions,
+  setDefaultOTLPTracingExporter,
+} from './otlpTracingExporter';
 /* only export the types not the parsers */
 export type {
   AgentInputItem,
