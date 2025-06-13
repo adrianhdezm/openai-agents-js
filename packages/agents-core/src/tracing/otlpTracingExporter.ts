@@ -109,6 +109,14 @@ function mapFunctionAttributes(data: any) {
   return attrs.filter(Boolean);
 }
 
+function mapAgentAttributes(data: any) {
+  const attrs = [otelAttribute('gen_ai.operation.name', 'invoke_agent')];
+  if (data.name) attrs.push(otelAttribute('gen_ai.agent.name', data.name));
+  if (data.output_type)
+    attrs.push(otelAttribute('gen_ai.output.type', data.output_type));
+  return attrs.filter(Boolean);
+}
+
 function toOtlpSpan(item: Trace | Span<any>): any | null {
   const json = item.toJSON() as any;
   if (!json) return null;
@@ -125,6 +133,9 @@ function toOtlpSpan(item: Trace | Span<any>): any | null {
   } else if (type === 'function') {
     attributes = mapFunctionAttributes(json.span_data);
     name = `execute_tool ${json.span_data.name ?? ''}`.trim();
+  } else if (type === 'agent') {
+    attributes = mapAgentAttributes(json.span_data);
+    name = `invoke_agent ${json.span_data.name ?? ''}`.trim();
   } else {
     attributes = spanDataToAttributes(json.span_data);
   }

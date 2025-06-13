@@ -81,6 +81,37 @@ describe('OTLPTracingExporter', () => {
     expect(attrs['gen_ai.usage.output_tokens']).toBe(2);
   });
 
+  it('maps agent span attributes', async () => {
+    const agentSpan = createCustomSpan({ data: { name: 'agent1' } });
+    agentSpan.toJSON = () => ({
+      object: 'trace.span',
+      id: '2',
+      trace_id: 't2',
+      parent_id: 'p2',
+      started_at: '2024-01-01T00:00:00.000Z',
+      ended_at: '2024-01-01T00:00:01.000Z',
+      span_data: { type: 'agent', name: 'AgentA', output_type: 'text' },
+      error: null,
+    });
+
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', fetchMock);
+    const exporter = new OTLPTracingExporter({ endpoint: 'http://l' });
+    await exporter.export([agentSpan]);
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    const otlp = body.resourceSpans[0].scopeSpans[0].spans[0];
+    const attrs: Record<string, any> = {};
+    for (const a of otlp.attributes) {
+      attrs[a.key] =
+        a.value.stringValue ?? a.value.doubleValue ?? a.value.boolValue;
+    }
+    expect(otlp.name).toBe('invoke_agent AgentA');
+    expect(attrs['gen_ai.operation.name']).toBe('invoke_agent');
+    expect(attrs['gen_ai.agent.name']).toBe('AgentA');
+    expect(attrs['gen_ai.output.type']).toBe('text');
+  });
+
   it('retries on server errors', async () => {
     const fetchMock = vi
       .fn()
