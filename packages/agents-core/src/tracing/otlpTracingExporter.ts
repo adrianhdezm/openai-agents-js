@@ -2,10 +2,10 @@ import {
   TracingExporter,
   BatchTraceProcessor,
   setTraceProcessors,
-} from './tracing';
-import type { Span } from './tracing/spans';
-import type { Trace } from './tracing/traces';
-import { getLogger } from './logger';
+} from './index';
+import type { Span } from './spans';
+import type { Trace } from './traces';
+import { getLogger } from '../logger';
 
 const logger = getLogger('openai-agents:otlp');
 

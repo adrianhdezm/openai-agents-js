@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { OTLPTracingExporter } from '../src/otlpTracingExporter';
+import { OTLPTracingExporter } from '../src/tracing/otlpTracingExporter';
 import { createCustomSpan } from '../src/tracing/createSpans';
 
 describe('OTLPTracingExporter', () => {
@@ -120,7 +120,7 @@ describe('OTLPTracingExporter', () => {
       const actual = await vi.importActual<any>('../src/tracing');
       return { ...actual, BatchTraceProcessor, setTraceProcessors };
     });
-    const mod = await import('../src/otlpTracingExporter');
+    const mod = await import('../src/tracing/otlpTracingExporter');
     mod.setDefaultOTLPTracingExporter();
     expect(BatchTraceProcessor).toHaveBeenCalled();
     expect(setTraceProcessors).toHaveBeenCalledWith([expect.anything()]);

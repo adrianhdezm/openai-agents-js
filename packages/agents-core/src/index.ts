@@ -114,7 +114,7 @@ export {
   OTLPTracingExporter,
   OTLPTracingExporterOptions,
   setDefaultOTLPTracingExporter,
-} from './otlpTracingExporter';
+} from './tracing/otlpTracingExporter';
 /* only export the types not the parsers */
 export type {
   AgentInputItem,
