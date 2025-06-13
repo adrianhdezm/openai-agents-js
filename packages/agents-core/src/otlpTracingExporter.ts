@@ -22,12 +22,91 @@ function timeToNano(time: string | null | undefined): number | undefined {
   return Date.parse(time) * 1e6;
 }
 
+function otelAttribute(key: string, value: any) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  const val: any = {};
+  if (typeof value === 'number') {
+    val.doubleValue = value;
+  } else if (typeof value === 'boolean') {
+    val.boolValue = value;
+  } else {
+    val.stringValue = String(value);
+  }
+  return { key, value: val };
+}
+
 function spanDataToAttributes(data: Record<string, any> | undefined) {
   if (!data) return [] as any[];
-  return Object.entries(data).map(([key, value]) => ({
-    key,
-    value: { stringValue: String(value) },
-  }));
+  return Object.entries(data)
+    .map(([key, value]) => otelAttribute(key, value))
+    .filter((a) => a !== null);
+}
+
+function guessOutputType(output: any[]): string | undefined {
+  if (!output || output.length === 0) return undefined;
+  const first = output[0];
+  if (first.type === 'message' && Array.isArray(first.content)) {
+    const c = first.content[0];
+    if (!c) return undefined;
+    if (c.type === 'output_text') return 'text';
+    if (c.type === 'image_url') return 'image';
+    if (c.type === 'speech') return 'speech';
+  }
+  return undefined;
+}
+
+function mapGenerationAttributes(data: any) {
+  const attrs = [otelAttribute('gen_ai.operation.name', 'generate_content')];
+  if (data.model) attrs.push(otelAttribute('gen_ai.request.model', data.model));
+  if (data.model_config) {
+    const c = data.model_config;
+    if (c.temperature !== undefined)
+      attrs.push(otelAttribute('gen_ai.request.temperature', c.temperature));
+    if (c.top_p !== undefined)
+      attrs.push(otelAttribute('gen_ai.request.top_p', c.top_p));
+    if (c.top_k !== undefined)
+      attrs.push(otelAttribute('gen_ai.request.top_k', c.top_k));
+    if (c.frequency_penalty !== undefined)
+      attrs.push(
+        otelAttribute('gen_ai.request.frequency_penalty', c.frequency_penalty),
+      );
+    if (c.presence_penalty !== undefined)
+      attrs.push(
+        otelAttribute('gen_ai.request.presence_penalty', c.presence_penalty),
+      );
+    if (c.max_tokens !== undefined)
+      attrs.push(otelAttribute('gen_ai.request.max_tokens', c.max_tokens));
+    if (c.stop_sequences)
+      attrs.push(
+        otelAttribute('gen_ai.request.stop_sequences', c.stop_sequences),
+      );
+    if (c.seed !== undefined)
+      attrs.push(otelAttribute('gen_ai.request.seed', c.seed));
+  }
+  if (data.usage) {
+    const u = data.usage;
+    if (u.inputTokens !== undefined)
+      attrs.push(otelAttribute('gen_ai.usage.input_tokens', u.inputTokens));
+    if (u.outputTokens !== undefined)
+      attrs.push(otelAttribute('gen_ai.usage.output_tokens', u.outputTokens));
+  }
+  if (data.output) {
+    const type = guessOutputType(data.output);
+    if (type) attrs.push(otelAttribute('gen_ai.output.type', type));
+  }
+  return attrs.filter(Boolean);
+}
+
+function mapFunctionAttributes(data: any) {
+  const attrs = [otelAttribute('gen_ai.operation.name', 'execute_tool')];
+  if (data.name) attrs.push(otelAttribute('gen_ai.tool.name', data.name));
+  if (data.call_id)
+    attrs.push(otelAttribute('gen_ai.tool.call.id', data.call_id));
+  if (data.description)
+    attrs.push(otelAttribute('gen_ai.tool.description', data.description));
+  return attrs.filter(Boolean);
 }
 
 function toOtlpSpan(item: Trace | Span<any>): any | null {
@@ -36,15 +115,35 @@ function toOtlpSpan(item: Trace | Span<any>): any | null {
   if (json.object === 'trace') {
     return null; // traces are not exported separately
   }
+
+  let attributes: any[] = [];
+  let name = json.span_data?.name ?? 'span';
+  const type = json.span_data?.type;
+  if (type === 'generation') {
+    attributes = mapGenerationAttributes(json.span_data);
+    name = `generate_content ${json.span_data.model ?? ''}`.trim();
+  } else if (type === 'function') {
+    attributes = mapFunctionAttributes(json.span_data);
+    name = `execute_tool ${json.span_data.name ?? ''}`.trim();
+  } else {
+    attributes = spanDataToAttributes(json.span_data);
+  }
+
+  if (json.error?.message) {
+    attributes.push(otelAttribute('error.type', json.error.message));
+  }
+
   return {
     traceId: json.trace_id,
     spanId: json.id,
     parentSpanId: json.parent_id ?? undefined,
-    name: json.span_data?.name ?? 'span',
+    name,
     startTimeUnixNano: timeToNano(json.started_at),
     endTimeUnixNano: timeToNano(json.ended_at),
-    attributes: spanDataToAttributes(json.span_data),
-    status: json.error ? { code: 2, message: String(json.error) } : { code: 1 },
+    attributes,
+    status: json.error
+      ? { code: 2, message: String(json.error.message) }
+      : { code: 1 },
   };
 }
 
