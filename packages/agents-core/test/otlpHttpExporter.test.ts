@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { OTLPTracingExporter } from '../src/tracing/otlpTracingExporter';
+import { OTLPHttpExporter } from '../src/tracing/otlpHttpExporter';
 import { createCustomSpan } from '../src/tracing/createSpans';
 
-describe('OTLPTracingExporter', () => {
+describe('OTLPHttpExporter', () => {
   const fakeSpan = createCustomSpan({
     data: { name: 'test' },
   });
@@ -25,7 +25,7 @@ describe('OTLPTracingExporter', () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     vi.stubGlobal('fetch', fetchMock);
 
-    const exporter = new OTLPTracingExporter({ endpoint: 'http://localhost' });
+    const exporter = new OTLPHttpExporter({ endpoint: 'http://localhost' });
     await exporter.export([fakeSpan], undefined);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, opts] = fetchMock.mock.calls[0];
@@ -64,7 +64,7 @@ describe('OTLPTracingExporter', () => {
 
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     vi.stubGlobal('fetch', fetchMock);
-    const exporter = new OTLPTracingExporter({ endpoint: 'http://l' });
+    const exporter = new OTLPHttpExporter({ endpoint: 'http://l' });
     await exporter.export([generationSpan]);
 
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
@@ -96,7 +96,7 @@ describe('OTLPTracingExporter', () => {
 
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     vi.stubGlobal('fetch', fetchMock);
-    const exporter = new OTLPTracingExporter({ endpoint: 'http://l' });
+    const exporter = new OTLPHttpExporter({ endpoint: 'http://l' });
     await exporter.export([agentSpan]);
 
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
@@ -123,7 +123,7 @@ describe('OTLPTracingExporter', () => {
       .mockResolvedValueOnce({ ok: true });
     vi.stubGlobal('fetch', fetchMock);
 
-    const exporter = new OTLPTracingExporter({
+    const exporter = new OTLPHttpExporter({
       endpoint: 'url',
       maxRetries: 2,
       baseDelay: 1,
@@ -138,12 +138,12 @@ describe('OTLPTracingExporter', () => {
       .fn()
       .mockResolvedValue({ ok: false, status: 400, text: async () => 'bad' });
     vi.stubGlobal('fetch', fetchMock);
-    const exporter = new OTLPTracingExporter({ endpoint: 'u', maxRetries: 2 });
+    const exporter = new OTLPHttpExporter({ endpoint: 'u', maxRetries: 2 });
     await exporter.export([fakeSpan]);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it('setDefaultOTLPTracingExporter registers processor', async () => {
+  it('setDefaultOTLPHttpExporter registers processor', async () => {
     const setTraceProcessors = vi.fn();
     const BatchTraceProcessor = vi.fn().mockImplementation((exp) => ({ exp }));
     vi.resetModules();
@@ -151,8 +151,8 @@ describe('OTLPTracingExporter', () => {
       const actual = await vi.importActual<any>('../src/tracing');
       return { ...actual, BatchTraceProcessor, setTraceProcessors };
     });
-    const mod = await import('../src/tracing/otlpTracingExporter');
-    mod.setDefaultOTLPTracingExporter();
+    const mod = await import('../src/tracing/otlpHttpExporter');
+    mod.setDefaultOTLPHttpExporter();
     expect(BatchTraceProcessor).toHaveBeenCalled();
     expect(setTraceProcessors).toHaveBeenCalledWith([expect.anything()]);
     vi.resetModules();

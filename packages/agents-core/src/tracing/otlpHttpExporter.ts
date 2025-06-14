@@ -9,7 +9,7 @@ import { getLogger } from '../logger';
 
 const logger = getLogger('openai-agents:otlp');
 
-export type OTLPTracingExporterOptions = {
+export type OTLPHttpExporterOptions = {
   endpoint: string;
   headers: Record<string, string>;
   maxRetries: number;
@@ -158,10 +158,10 @@ function toOtlpSpan(item: Trace | Span<any>): any | null {
   };
 }
 
-export class OTLPTracingExporter implements TracingExporter {
-  #options: OTLPTracingExporterOptions;
+export class OTLPHttpExporter implements TracingExporter {
+  #options: OTLPHttpExporterOptions;
 
-  constructor(options: Partial<OTLPTracingExporterOptions> = {}) {
+  constructor(options: Partial<OTLPHttpExporterOptions> = {}) {
     this.#options = {
       endpoint: options.endpoint ?? 'http://localhost:4318/v1/traces',
       headers: options.headers ?? {},
@@ -239,10 +239,10 @@ export class OTLPTracingExporter implements TracingExporter {
   }
 }
 
-export function setDefaultOTLPTracingExporter(
-  options?: Partial<OTLPTracingExporterOptions>,
+export function setDefaultOTLPHttpExporter(
+  options?: Partial<OTLPHttpExporterOptions>,
 ) {
-  const exporter = new OTLPTracingExporter(options);
+  const exporter = new OTLPHttpExporter(options);
   const processor = new BatchTraceProcessor(exporter);
   setTraceProcessors([processor]);
 }
