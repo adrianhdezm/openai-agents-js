@@ -824,7 +824,9 @@ export class Runner extends RunHooks<any, AgentOutputType<unknown>> {
             resetCurrentSpan();
           }
           result.state._currentAgentSpan = undefined;
-          result._addItem(new RunAgentUpdatedStreamEvent(currentAgent));
+          result._addItem(
+            new RunAgentUpdatedStreamEvent(result.state._currentAgent),
+          );
           result.state._noActiveAgentRun = true;
 
           // we've processed the handoff, so we need to run the loop again
